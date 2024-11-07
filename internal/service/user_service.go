@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mozart-rue/gobid/internal/store/pgstore"
@@ -55,13 +56,21 @@ func (us *UserService) CreateUser(ctx context.Context, userName, email, password
 }
 
 func (us *UserService) SignInUser(ctx context.Context, email, password string) (uuid.UUID, error) {
-	_, err := us.queries.GetUserByEmail(ctx, email)
+	user, err := us.queries.GetUserByEmail(ctx, email)
 	if err != nil {
-		// if errors.Is(err, pgx.ErrNoRows) {
-		//   return uuid.UUID{}, ErrInvalidCredentials
-		// }
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.UUID{}, ErrInvalidCredentials
+		}
 		return uuid.UUID{}, err
 	}
 
-	return uuid.UUID{}, nil
+	err = bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return uuid.UUID{}, ErrInvalidCredentials
+		}
+		return uuid.UUID{}, err
+	}
+
+	return user.ID, nil
 }
