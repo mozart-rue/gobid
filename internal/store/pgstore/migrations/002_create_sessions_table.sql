@@ -6,7 +6,7 @@ CREATE TABLE sessions (
     expiry TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX sessions_expiry_idx ON sessions (expiry)
+CREATE INDEX sessions_expiry_idx ON sessions (expiry);
 
 ---- create above / drop below ----
 
